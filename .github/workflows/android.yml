@@ -37,17 +37,37 @@ jobs:
         with:
           gradle-version: "8.9"
 
-      - name: Fix Java and Kotlin JVM targets
+      -       - name: Fix Kotlin and Android imports
         working-directory: project
         run: |
           python3 - <<'PY'
           from pathlib import Path
 
+          p = Path("app/src/main/java/com/example/googleblackwidget/GoogleSearchWidget.kt")
+          s = p.read_text().replace(
+              "import android.provider.SearchManager",
+              "import android.app.SearchManager"
+          )
+          p.write_text(s)
+
+          p = Path("app/src/main/java/com/example/googleblackwidget/VoiceSearchActivity.kt")
+          s = p.read_text()
+          if "import android.net.Uri" not in s:
+              s = s.replace(
+                  "import android.content.Intent",
+                  "import android.content.Intent\nimport android.net.Uri"
+              )
+          p.write_text(s)
+          PY
+
+          python3 - <<'PY'
+          from pathlib import Path
           p = Path("app/build.gradle.kts")
           s = p.read_text()
-          s = s.replace(
-              "android {\n",
-              """android {
+          if "sourceCompatibility = JavaVersion.VERSION_17" not in s:
+              s = s.replace(
+                  "android {\n",
+                  """android {
               compileOptions {
                   sourceCompatibility = JavaVersion.VERSION_17
                   targetCompatibility = JavaVersion.VERSION_17
@@ -56,11 +76,10 @@ jobs:
                   jvmTarget = "17"
               }
           """,
-              1
-          )
+                  1
+              )
           p.write_text(s)
           PY
-
       - name: Build APK
         working-directory: project
         run: gradle :app:assembleDebug
