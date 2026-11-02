@@ -16,7 +16,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Find and extract project ZIP
+      - name: Extract Android project
         run: |
           ZIP_FILE=$(find . -maxdepth 1 -name '*.zip' -print -quit)
           if [ -z "$ZIP_FILE" ]; then
@@ -37,14 +37,15 @@ jobs:
         with:
           gradle-version: "8.9"
 
-      -       - name: Fix Kotlin and Android imports
+      - name: Fix Android imports and JVM targets
         working-directory: project
         run: |
           python3 - <<'PY'
           from pathlib import Path
 
           p = Path("app/src/main/java/com/example/googleblackwidget/GoogleSearchWidget.kt")
-          s = p.read_text().replace(
+          s = p.read_text()
+          s = s.replace(
               "import android.provider.SearchManager",
               "import android.app.SearchManager"
           )
@@ -58,10 +59,7 @@ jobs:
                   "import android.content.Intent\nimport android.net.Uri"
               )
           p.write_text(s)
-          PY
 
-          python3 - <<'PY'
-          from pathlib import Path
           p = Path("app/build.gradle.kts")
           s = p.read_text()
           if "sourceCompatibility = JavaVersion.VERSION_17" not in s:
@@ -80,6 +78,7 @@ jobs:
               )
           p.write_text(s)
           PY
+
       - name: Build APK
         working-directory: project
         run: gradle :app:assembleDebug
